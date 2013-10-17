@@ -29,7 +29,7 @@ Prado::using('System.Data.TDbConnection');
  * </code>
  * PHP configuration style:
  * <code>
- * 
+ *
  * </code>
  * You can specify multiple routes with different filtering conditions and different
  * targets, even if the routes are of the same type.
@@ -128,8 +128,8 @@ class TLogRouter extends TModule
 
 	/**
 	 * Adds a TLogRoute instance to the log router.
-	 * 
-	 * @param TLogRoute $route 
+	 *
+	 * @param TLogRoute $route
 	 * @throws TInvalidDataTypeException if the route object is invalid
 	 */
 	public function addRoute($route)
@@ -169,6 +169,19 @@ class TLogRouter extends TModule
 		$logger=Prado::getLogger();
 		foreach($this->_routes as $route)
 			$route->collectLogs($logger);
+	}
+
+	/**
+	 * Process a log message for immediate logging
+	 * @param array $log a log row
+	 */
+	public function processLog($log)
+	{
+		foreach($this->_routes as $route){
+			if ($route->isImmediate()){
+				$route->processLog($log);
+			}
+		}
 	}
 }
 
@@ -228,7 +241,18 @@ abstract class TLogRoute extends TApplicationComponent
 	 * @var array log category filter
 	 */
 	private $_categories=null;
-
+	/**
+	 * @var boolean true if this logroute writes logs immediate
+	 */
+	 private $_immediate=false;
+	 /**
+	 * @var string The dateformat of this log route
+	 */
+	 private $_dateFormat='M d H:i:s';
+	/**
+	 * @var boolean true whenever use gmt or local time for logging
+	 */
+	 private $_useGmt=true;
 	/**
 	 * Initializes the route.
 	 * @param TXmlElement configurations specified in {@link TLogRouter}.
@@ -311,6 +335,53 @@ abstract class TLogRoute extends TApplicationComponent
 	{
 		return isset(self::$_levelValues[$level])?self::$_levelValues[$level]:0;
 	}
+	/**
+	 * @return boolean true if it is a immediate logger
+	 */
+	public function isImmediate()
+	{
+		return $this->_immediate;
+	}
+
+	/**
+	 * @param boolean sets the immediate property of this logger
+	 */
+	public function setImmediate($value)
+	{
+		$this->_immediate = TPropertyValue::ensureBoolean($value);;
+	}
+
+	/**
+	 * @return boolean true if this logger logs the date in gmt
+	 */
+	public function isUseGmt()
+	{
+		return $this->_useGmt;
+	}
+
+	/**
+	 * @param boolean sets the usegmt property of this logger
+	 */
+	public function setUseGmt($value)
+	{
+		$this->_useGmt = TPropertyValue::ensureBoolean($value);
+	}
+
+	/**
+	 * @return string gets the date format of this logger
+	 */
+	public function getDateFormat()
+	{
+		return $this->_dateFormat;
+	}
+
+	/**
+	 * @param string sets the dateformat property of this logger
+	 */
+	public function setDateFormat($dateformat)
+	{
+		$this->_dateFormat = $dateformat;
+	}
 
 	/**
 	 * Formats a log message given different fields.
@@ -322,7 +393,11 @@ abstract class TLogRoute extends TApplicationComponent
 	 */
 	protected function formatLogMessage($message,$level,$category,$time)
 	{
-		return @gmdate('M d H:i:s',$time).' ['.$this->getLevelName($level).'] ['.$category.'] '.$message."\n";
+		if ($this->isUseGmt()){
+			return @gmdate($this->getDateFormat(),$time).' ['.$this->getLevelName($level).'] ['.$category.'] '.$message."\n";
+		} else {
+			return @date($this->getDateFormat(),$time).' ['.$this->getLevelName($level).'] ['.$category.'] '.$message."\n";
+		}
 	}
 
 	/**
@@ -336,6 +411,21 @@ abstract class TLogRoute extends TApplicationComponent
 			$this->processLogs($logs);
 	}
 
+	/**
+	 * Handles immediate log writes.
+	 * @param array a log row
+	 */
+	public function processLog($log)
+	{
+		$incategory = false;
+		foreach($this->_categories as $category)
+		{
+			if($log[2]===$category || strpos($log[2],$category.'.')===0)
+				$incategory = true;
+		}
+		if(($log[1] & $this->_levels) && $incategory)
+			$this->processLogs(array($log));
+	}
 	/**
 	 * Processes log messages and sends them to specific destination.
 	 * Derived child classes must implement this method.
@@ -639,7 +729,7 @@ class TBrowserLogRoute extends TLogRoute
 	 * @var string css class for indentifying the table structure in the dom tree
 	 */
 	private $_cssClass=null;
-	
+
 	public function processLogs($logs)
 	{
 		if(empty($logs) || $this->getApplication()->getMode()==='Performance') return;
@@ -664,7 +754,7 @@ class TBrowserLogRoute extends TLogRoute
 		}
 		$response->write($this->renderFooter());
 	}
-	
+
 	/**
 	 * @param string the css class of the control
 	 */
