@@ -126,7 +126,10 @@ class NumberFormat
 		$string = (string)$number;
 
 		$decimal = $this->formatDecimal($string);
-		$integer = $this->formatInteger(abs($number));
+		$number = strtr($number,",",".");
+		$int = $number;
+		if (bccomp($number,"0",2) == -1) $int = bcmul($number, "-1", 2);
+		$integer = $this->formatInteger($int);
 
 		if(strlen($decimal)>0)
 			$result = $integer.$decimal;
