@@ -77,7 +77,7 @@ class TLogger extends TComponent
 		$this->_logs[]=array($message,$level,$category,microtime(true),memory_get_usage(),$ctl);
 		$logrouter =  Prado::getApplication()->getModule('log');
 		if (isset($logrouter)){
-			$logrouter->processLog(end($this->logs[]));
+			$logrouter->processLog(end($this->_logs));
 			reset($this->_logs);
 		}
 	}
