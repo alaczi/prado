@@ -116,7 +116,7 @@ class TNumberFormat extends TI18NControl implements IDataRenderer
 	{
 		return $this->getViewState('DefaultText','');
 	}
-	
+
 	/**
 	 * Set the default text value for this control.
 	 * @param string default text value
@@ -237,9 +237,9 @@ class TNumberFormat extends TI18NControl implements IDataRenderer
 		}
 
 		//return the application wide culture formatted number.
-		return self::$formatter->format($this->getValue(),$pattern,
+		return str_replace(' ','&nbsp;', self::$formatter->format($this->getValue(),$pattern,
 										$this->getCurrency(),
-										$this->getCharset());
+										$this->getCharset()));
 	}
 
 	public function render($writer)
